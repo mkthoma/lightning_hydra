@@ -15,7 +15,7 @@ print(f"Project root: {root}")
 
 # Imports that require root directory setup
 from src.utils import logging_utils
-from src.models.timm_classifier import DogBreedClassifier
+from src.models.timm_classifier import TimmClassifier
 
 log = logging_utils.logger
 
@@ -27,7 +27,7 @@ def infer(cfg: DictConfig):
 
     # Set up model
     log.info("Instantiating model")
-    model: DogBreedClassifier = hydra.utils.instantiate(cfg.model)
+    model: TimmClassifier = hydra.utils.instantiate(cfg.model)
 
     # Load the best model checkpoint
     if trainer.checkpoint_callback.best_model_path:
