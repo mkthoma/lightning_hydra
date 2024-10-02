@@ -8,6 +8,8 @@ from PIL import Image
 import torchvision.transforms as transforms
 import glob
 import rootutils
+from typing import List
+from lightning.pytorch.loggers import Logger
 
 # Setup root directory
 root = rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
@@ -19,29 +21,71 @@ from src.models.timm_classifier import TimmClassifier
 
 log = logging_utils.logger
 
+def instantiate_callbacks(callback_cfg: DictConfig) -> List[L.Callback]:
+    callbacks: List[L.Callback] = []
+    if not callback_cfg:
+        log.warning("No callback configs found! Skipping..")
+        return callbacks
+
+    for _, cb_conf in callback_cfg.items():
+        if "_target_" in cb_conf:
+            log.info(f"Instantiating callback <{cb_conf._target_}>")
+            callbacks.append(hydra.utils.instantiate(cb_conf))
+
+    return callbacks
+
+def instantiate_loggers(logger_cfg: DictConfig) -> List[Logger]:
+    loggers: List[Logger] = []
+    if not logger_cfg:
+        log.warning("No logger configs found! Skipping..")
+        return loggers
+
+    for _, lg_conf in logger_cfg.items():
+        if "_target_" in lg_conf:
+            log.info(f"Instantiating logger <{lg_conf._target_}>")
+            loggers.append(hydra.utils.instantiate(lg_conf))
+
+    return loggers
+
 @logging_utils.task_wrapper
 def infer(cfg: DictConfig):
-    # Set up trainer (needed to access the checkpoint callback)
+    # Set up callbacks
+    callbacks: List[L.Callback] = instantiate_callbacks(cfg.get("callbacks"))
+
+    # Set up loggers
+    loggers: List[Logger] = instantiate_loggers(cfg.get("logger"))
+
+    # Set up trainer
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: L.Trainer = hydra.utils.instantiate(cfg.trainer)
+    trainer: L.Trainer = hydra.utils.instantiate(
+        cfg.trainer,
+        callbacks=callbacks,
+        logger=loggers,
+    )
 
     # Set up model
     log.info("Instantiating model")
     model: TimmClassifier = hydra.utils.instantiate(cfg.model)
 
-    # Load the best model checkpoint
-    if trainer.checkpoint_callback.best_model_path:
-        log.info(f"Loading best checkpoint: {trainer.checkpoint_callback.best_model_path}")
-        model = model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
-    else:
-        log.warning("No checkpoint found! Using initialized model weights.")
+    # Load the best checkpoint
+    runs_dir = os.path.join(cfg.paths.log_dir, cfg.train_task_name, "runs")
+    log.info(f"Runs directory: {runs_dir}")
 
-    # Print out the metrics from trainer.callback_metrics
-    log.info("Model metrics:")
-    for metric_name, metric_value in trainer.callback_metrics.items():
-        log.info(f"{metric_name}: {metric_value}")
+    checkpoints = glob.glob(os.path.join(runs_dir, "**", "*.ckpt"), recursive=True)
+
+    if checkpoints:
+        best_checkpoint = max(checkpoints, key=os.path.getmtime)
+        log.info(f"Loading best checkpoint: {best_checkpoint}")
+        model = TimmClassifier.load_from_checkpoint(best_checkpoint)
+    else:
+        log.warning("No checkpoints found! Using initialized model weights.")
 
     model.eval()
+
+    # Add this section to load class labels
+    class_labels = cfg.data.class_names if hasattr(cfg.data, 'class_names') else None
+    if class_labels is None:
+        log.warning("No class labels found in config. Using index as label.")
 
     # Set up image transformation
     transform = transforms.Compose([
@@ -66,7 +110,10 @@ def infer(cfg: DictConfig):
         with torch.no_grad():
             output = model(img_tensor)
             _, predicted_idx = torch.max(output, 1)
-            predicted_label = model.idx_to_class[predicted_idx.item()]
+            if class_labels:
+                predicted_label = class_labels[predicted_idx.item()]
+            else:
+                predicted_label = f"Class {predicted_idx.item()}"
 
         # Create a figure with the image and prediction
         plt.figure(figsize=(10, 10))

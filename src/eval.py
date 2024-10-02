@@ -18,6 +18,32 @@ from src.models.timm_classifier import TimmClassifier
 
 log = logging_utils.logger
 
+def instantiate_callbacks(callback_cfg: DictConfig) -> List[L.Callback]:
+    callbacks: List[L.Callback] = []
+    if not callback_cfg:
+        log.warning("No callback configs found! Skipping..")
+        return callbacks
+
+    for _, cb_conf in callback_cfg.items():
+        if "_target_" in cb_conf:
+            log.info(f"Instantiating callback <{cb_conf._target_}>")
+            callbacks.append(hydra.utils.instantiate(cb_conf))
+
+    return callbacks
+
+def instantiate_loggers(logger_cfg: DictConfig) -> List[Logger]:
+    loggers: List[Logger] = []
+    if not logger_cfg:
+        log.warning("No logger configs found! Skipping..")
+        return loggers
+
+    for _, lg_conf in logger_cfg.items():
+        if "_target_" in lg_conf:
+            log.info(f"Instantiating logger <{lg_conf._target_}>")
+            loggers.append(hydra.utils.instantiate(lg_conf))
+
+    return loggers
+
 @logging_utils.task_wrapper
 def evaluate(cfg: DictConfig):
     # Set up data module
@@ -35,53 +61,35 @@ def evaluate(cfg: DictConfig):
     # Get the number of classes from the data module
     num_classes = len(datamodule.val_dataset.dataset.classes)
     log.info(f"Number of classes detected: {num_classes}")
-
-    # Find the latest checkpoint
-    checkpoint_dir = cfg.paths.checkpoint_dir
-    checkpoint_pattern = os.path.join(checkpoint_dir, "epoch_*-val_acc_*.ckpt")
-    checkpoints = glob.glob(checkpoint_pattern)
-
-    if not checkpoints:
-        raise FileNotFoundError(f"No checkpoint found in {checkpoint_dir}")
     
-    # Get the most recent checkpoint
-    latest_checkpoint = max(checkpoints, key=os.path.getmtime)
-    log.info(f"Loading latest checkpoint: {latest_checkpoint}")
-
     # Set up callbacks
-    callbacks: List[L.Callback] = []
-    if "callbacks" in cfg:
-        for _, cb_conf in cfg.callbacks.items():
-            if "_target_" in cb_conf:
-                log.info(f"Instantiating callback <{cb_conf._target_}>")
-                callbacks.append(hydra.utils.instantiate(cb_conf))
+    callbacks: List[L.Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     # Set up logger
-    logger: List[Logger] = []
-    if "logger" in cfg:
-        for _, lg_conf in cfg.logger.items():
-            if "_target_" in lg_conf:
-                log.info(f"Instantiating logger <{lg_conf._target_}>")
-                logger.append(hydra.utils.instantiate(lg_conf))
+    loggers: List[Logger] = instantiate_loggers(cfg.get("logger"))
 
     # Set up trainer
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: L.Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+    trainer: L.Trainer = hydra.utils.instantiate(
+        cfg.trainer,
+        callbacks=callbacks,
+        logger=loggers,
+    )
 
-    # Set up model
-    log.info("Instantiating model")
-    model: TimmClassifier = hydra.utils.instantiate(cfg.model, num_classes=num_classes)
+    # Load the checkpoint with the best validation accuracy
+    runs_dir = os.path.join(cfg.paths.log_dir, cfg.train_task_name, "runs")
+    log.info(f"Runs directory: {runs_dir}")
 
-    # Load the best model checkpoint
-    if trainer.checkpoint_callback.best_model_path:
-        log.info(f"Loading best checkpoint: {trainer.checkpoint_callback.best_model_path}")
-        model = model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, num_classes=num_classes)
+    checkpoints = glob.glob(os.path.join(runs_dir, "**", "*.ckpt"), recursive=True)
+
+    if checkpoints:
+        best_checkpoint = max(checkpoints, key=os.path.getmtime)
+        log.info(f"Loading best checkpoint: {best_checkpoint}")
+        results = trainer.validate(model=TimmClassifier.load_from_checkpoint(best_checkpoint), datamodule=datamodule)
     else:
-        log.warning("No checkpoint found! Using initialized model weights.")
-
-    # Evaluate the model
-    log.info("Starting evaluation")
-    results = trainer.validate(model, datamodule=datamodule)
+        log.warning("No checkpoints found! Using initialized model weights.")
+        model = TimmClassifier(num_classes=num_classes, **cfg.model)
+        results = trainer.validate(model=model, datamodule=datamodule)
 
     # Print validation metrics
     log.info("Validation Metrics:")

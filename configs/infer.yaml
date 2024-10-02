@@ -4,20 +4,24 @@
 # order of defaults determines the order in which configs override each other
 defaults:
   - _self_
-  - model: timm_classifier
+  - model: timm_classify
   - trainer: default
   - paths: default
   - hydra: default
 
   # experiment configs allow for version control of specific hyperparameters
   # e.g. best hyperparameters for given model and datamodule
-  - experiment: dogbreed_experiment
+  # - experiment: dogbreed_experiment
 
   # debugging config (enable through command line, e.g. `python infer.py debug=default)
   - debug: null
 
 # task name, determines output directory path
 task_name: "infer"
+
+# task name for train.yaml. used for loading the best checkpoint
+train_task_name: "train"
+
 
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
@@ -41,3 +45,16 @@ num_images: 10
 
 # Image file extension to look for
 image_extension: "*.jpg"
+
+data:
+  class_names: 
+    - Beagle
+    - Boxer
+    - Bulldog
+    - Dachshund
+    - German_Shepherd
+    - Golden_Retriever
+    - Labrador_Retriever
+    - Poodle
+    - Rottweiler
+    - Yorkshire_Terrier

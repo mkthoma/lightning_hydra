@@ -44,6 +44,8 @@ class DogBreedImageDataModule(L.LightningDataModule):
         self.train_transform = self._create_train_transform()
         self.val_transform = self._create_val_transform()
 
+        self.dataset_path = self.data_dir / 'dataset'
+
     def _get_num_workers(self, default: int) -> int:
         """Automatically determine number of workers based on available device."""
         if torch.cuda.is_available():
@@ -69,7 +71,11 @@ class DogBreedImageDataModule(L.LightningDataModule):
         ])
 
     def prepare_data(self):
-        """Download images and prepare datasets."""
+        """Download images if not already present."""
+        if self.dataset_path.exists() and any(self.dataset_path.iterdir()):
+            print(f"Dataset already exists in {self.dataset_path}. Skipping download.")
+            return
+
         # Initialize Kaggle API
         api = KaggleApi()
         api.authenticate()
@@ -81,40 +87,45 @@ class DogBreedImageDataModule(L.LightningDataModule):
 
     def setup(self, stage: str = None):
         """Setup datasets based on the stage (fit/test)."""
-        data_path = self.data_dir / 'dataset'
+        print(f"Setting up data from: {self.dataset_path}")
 
-        print(f"Setting up data from: {data_path}")
+        full_dataset = ImageFolder(root=self.dataset_path, transform=self.train_transform)
+        print(f"Number of classes detected: {len(full_dataset.classes)}")
+        print(f"Classes: {full_dataset.classes}")
+        print(f"Total number of samples: {len(full_dataset)}")
 
-        if stage == "fit" or stage is None:
-            full_dataset = ImageFolder(root=data_path, transform=self.train_transform)
-            print(f"Number of classes detected: {len(full_dataset.classes)}")
-            print(f"Classes: {full_dataset.classes}")
-            print(f"Total number of samples: {len(full_dataset)}")
+        # Split the dataset into train, validation, and test sets
+        total_size = len(full_dataset)
+        train_size = int(self.train_val_test_split[0] * total_size)
+        val_size = int(self.train_val_test_split[1] * total_size)
+        test_size = total_size - train_size - val_size
 
-            # Split the dataset into train, validation, and test sets
-            total_size = len(full_dataset)
-            train_size = int(self.train_val_test_split[0] * total_size)
-            val_size = int(self.train_val_test_split[1] * total_size)
-            test_size = total_size - train_size - val_size
+        self.train_dataset, self.val_dataset, self.test_dataset = torch.utils.data.random_split(
+            full_dataset,
+            [train_size, val_size, test_size]
+        )
 
-            self.train_dataset, self.val_dataset, self.test_dataset = torch.utils.data.random_split(
-                full_dataset,
-                [train_size, val_size, test_size]
-            )
-            print(f"Training samples: {train_size}, Validation samples: {val_size}, Test samples: {test_size}")
+        # Apply appropriate transforms
+        self.train_dataset.dataset.transform = self.train_transform
+        self.val_dataset.dataset.transform = self.val_transform
+        self.test_dataset.dataset.transform = self.val_transform
 
-        if stage == "test":
-            # Apply validation transform to test dataset
-            self.test_dataset.dataset.transform = self.val_transform
+        print(f"Training samples: {len(self.train_dataset)}, Validation samples: {len(self.val_dataset)}, Test samples: {len(self.test_dataset)}")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True, pin_memory=self.pin_memory)
+        loader = DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True, pin_memory=self.pin_memory)
+        print(f"Train dataloader created with {len(loader.dataset)} samples")
+        return loader
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        print(f"Validation dataloader created with {len(loader.dataset)} samples")
+        return loader
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        loader = DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers, pin_memory=self.pin_memory)
+        print(f"Test dataloader created with {len(loader.dataset)} samples")
+        return loader
 
 # Example usage
 if __name__ == "__main__":

@@ -37,8 +37,9 @@ callbacks:
     monitor: "val/acc"
     mode: "max"
     save_top_k: 1
-    save_last: True
+    save_last: False
     filename: "epoch_{epoch:03d}-val_acc_{val/acc:.4f}"
+    every_n_epochs: 1
 
   early_stopping:
     monitor: "val/acc"
