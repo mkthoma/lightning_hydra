@@ -27,6 +27,15 @@ jobs:
       run: |
         uv sync --index-strategy unsafe-best-match
 
+    - name: Set up Kaggle credentials
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      run: |
+        mkdir -p ~/.kaggle
+        echo "{\"username\":\"${KAGGLE_USERNAME}\",\"key\":\"${KAGGLE_KEY}\"}" > ~/.kaggle/kaggle.json
+        chmod 600 ~/.kaggle/kaggle.json
+
     - name: Run tests with coverage
       run: |
         uv run coverage run -m pytest
