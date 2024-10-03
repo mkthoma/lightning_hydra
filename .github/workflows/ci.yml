@@ -25,7 +25,7 @@ jobs:
       env:
         UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
       run: |
-        uv sync
+        uv sync --index-strategy unsafe-best-match
 
     - name: Run tests with coverage
       run: |
