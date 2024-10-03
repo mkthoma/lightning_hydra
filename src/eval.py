@@ -98,10 +98,18 @@ def evaluate(cfg: DictConfig):
 
     # Print callback metrics
     log.info("Callback Metrics:")
+    callback_metrics = {}
     for k, v in trainer.callback_metrics.items():
         log.info(f"{k}: {v}")
+        callback_metrics[k] = v
 
     log.info("Evaluation complete")
+
+    # Return both validation and callback metrics
+    return {
+        "validation_metrics": results[0],
+        "callback_metrics": callback_metrics
+    }
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
 def main(cfg: DictConfig) -> None:
@@ -109,7 +117,12 @@ def main(cfg: DictConfig) -> None:
     logging_utils.setup_logger(log_file=f"{cfg.paths.output_dir}/eval.log")
     
     # Evaluate the model
-    evaluate(cfg)
+    evaluation_metrics = evaluate(cfg)
+
+    # Print evaluation metrics
+    log.info("Evaluation Metrics:")
+    for k, v in evaluation_metrics.items():
+        log.info(f"{k}: {v}")
 
 if __name__ == "__main__":
     main()

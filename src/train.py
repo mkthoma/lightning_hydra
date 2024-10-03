@@ -49,15 +49,15 @@ def instantiate_loggers(logger_cfg: DictConfig) -> List[Logger]:
     return loggers
 
 @logging_utils.task_wrapper
-def train(cfg: DictConfig, trainer: L.Trainer, model: TimmClassifier, datamodule: DogBreedImageDataModule):
+def run_train(cfg: DictConfig, trainer: L.Trainer, model: TimmClassifier, datamodule: DogBreedImageDataModule):
     log.info("Starting training!")
     trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
     
     train_metrics = trainer.callback_metrics
     log.info(f"Training metrics:\n{train_metrics}")
-
+    return train_metrics
 @logging_utils.task_wrapper
-def test(cfg: DictConfig, trainer: L.Trainer, model: TimmClassifier, datamodule: DogBreedImageDataModule):
+def run_test(cfg: DictConfig, trainer: L.Trainer, model: TimmClassifier, datamodule: DogBreedImageDataModule):
     log.info("Starting testing!")
     
     if trainer.checkpoint_callback.best_model_path:
@@ -73,6 +73,7 @@ def test(cfg: DictConfig, trainer: L.Trainer, model: TimmClassifier, datamodule:
     results_file = os.path.join(cfg.paths.output_dir, "test_results.pt")
     torch.save(test_metrics[0], results_file)
     log.info(f"Test results saved to {results_file}")
+    return test_metrics
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg: DictConfig) -> None:
@@ -103,11 +104,11 @@ def main(cfg: DictConfig) -> None:
 
     # Train the model
     if cfg.get("train", True):
-        train(cfg, trainer, model, datamodule)
+        run_train(cfg, trainer, model, datamodule)
 
     # Test the model
     if cfg.get("test", False):
-        test(cfg, trainer, model, datamodule)
+        run_test(cfg, trainer, model, datamodule)
 
 if __name__ == "__main__":
     main()

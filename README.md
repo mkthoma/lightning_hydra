@@ -9,11 +9,21 @@ echo 'export KAGGLE_USERNAME="mkthoma"' >> ~/.bashrc
 echo 'export KAGGLE_KEY="d1319e20badd7a804413536615a77359"' >> ~/.bashrc
 source ~/.bashrc
 
+uv sync --index-strategy unsafe-best-match
 
 echo 'export KAGGLE_USERNAME="your_username"' >> ~/.bashrc
 echo 'export KAGGLE_KEY="your_api_key"' >> ~/.bashrc
 source ~/.bashrc
 ```
+pytest tests/models/test_timm_classifier.py
+pytest tests/datamodules/test_dogbreed.py
+pytest tests/test_train.py
+pytest tests/test_eval.py
+pytest tests/test_infer.py
+
+
+![image](https://github.com/user-attachments/assets/aa462145-851a-4bb5-a123-cf1dbf357913)
+
 
 
 ## Dataset used 

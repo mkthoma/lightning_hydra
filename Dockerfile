@@ -1,46 +1,40 @@
-# Use NVIDIA CUDA image as the base image
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+# Build stage
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
-# Set the working directory in the container
+ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+
 WORKDIR /app
 
-# Install Python and pip
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+	--mount=type=bind,source=uv.lock,target=uv.lock \
+	--mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+	uv sync --frozen --no-install-project --no-dev
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Copy the rest of the application
+ADD . /app
 
-# Install the required packages
-RUN pip install --no-cache-dir -r requirements.txt
+# Install the project and its dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+	uv sync --frozen --no-dev
 
-# Copy the entire project into the container
-COPY . .
+# Final stage
+FROM python:3.12-slim-bookworm
 
-# Set the PYTHONPATH to include the src directory
-ENV PYTHONPATH="${PYTHONPATH}:/app/src"
+# Copy the application from the builder
+COPY --from=builder --chown=app:app /app /app
 
-# Create a directory for Kaggle credentials
-RUN mkdir -p /root/.kaggle
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Create an entrypoint script
-RUN echo '#!/bin/bash\n\
-# Set up Kaggle credentials\n\
-echo "{\\"username\\":\\"$KAGGLE_USERNAME\\",\\"key\\":\\"$KAGGLE_KEY\\"}" > /root/.kaggle/kaggle.json\n\
-chmod 600 /root/.kaggle/kaggle.json\n\
-\n\
-if [ "$1" = "train" ]; then\n\
-    python3 src/train.py "${@:2}"\n\
-elif [ "$1" = "eval" ]; then\n\
-    python3 src/eval.py "${@:2}"\n\
-elif [ "$1" = "infer" ]; then\n\
-    python3 src/infer.py "${@:2}"\n\
-else\n\
-    echo "Invalid command. Use 'train', 'eval', or 'infer'."\n\
-    exit 1\n\
-fi' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# Set the working directory
+WORKDIR /app
+
+# Create Kaggle username and password
+RUN mkdir -p /root/.kaggle && \
+    echo '{"username":"YOUR_KAGGLE_USERNAME","key":"YOUR_KAGGLE_API_KEY"}' > /root/.kaggle/kaggle.json && \
+    chmod 600 /root/.kaggle/kaggle.json
 
 # Set the entrypoint
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["python"]
