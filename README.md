@@ -35,19 +35,19 @@ Based on the provided Dockerfile, the Docker commands for building the image and
 2. Run the train command:
 
     ```
-    docker run --rm dogbreed-classifier train
+    docker run --rm -v $(pwd)/logs:/app/logs -v $(pwd)/data:/app/data dogbreed-classifier src/train.py
     ```
 
 3.  Run the eval command:
 
     ```
-    docker run --rm dogbreed-classifier eval
+    docker run --rm -v $(pwd)/logs:/app/logs -v $(pwd)/data:/app/data dogbreed-classifier src/eval.py
     ``` 
 
 4. Run the infer command:
 
     ```
-    docker run --rm -v $(pwd)/outputs:/app/outputs dogbreed-classifier infer
+    docker run --rm -v $(pwd)/model_artifacts:/app/model_artifacts -v $(pwd)/logs:/app/logs -v $(pwd)/data:/app/data dogbreed-classifier src/infer.py 
     ```
 
 ## Testing
