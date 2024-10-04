@@ -1,120 +1,52 @@
-# Dog Breed Classifier using Docker and PyTorch Lightning
+# Dog Breed Classifier using PyTorch Lightning, Hydra and Docker
 
-```
-touch .project-root
+This project is a dog breed classifier that uses PyTorch Lightning, Hydra and Docker. It is a simple example of how to use these technologies to build a machine learning model. It is not meant to be a production-ready application.
 
-export UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+It is an adaptation of the [my earlier repository](https://github.com/mkthoma/pytorch_lightning_docker) to showcase the use of Hydra for configuration management and Docker for containerization.
 
-echo 'export KAGGLE_USERNAME="mkthoma"' >> ~/.bashrc
-echo 'export KAGGLE_KEY="d1319e20badd7a804413536615a77359"' >> ~/.bashrc
-source ~/.bashrc
-
-uv sync --index-strategy unsafe-best-match
-
-echo 'export KAGGLE_USERNAME="your_username"' >> ~/.bashrc
-echo 'export KAGGLE_KEY="your_api_key"' >> ~/.bashrc
-source ~/.bashrc
-```
-pytest tests/models/test_timm_classifier.py
-pytest tests/datamodules/test_dogbreed.py
-pytest tests/test_train.py
-pytest tests/test_eval.py
-pytest tests/test_infer.py
+Before you start, make sure you have the following:
 
 
-![image](https://github.com/user-attachments/assets/aa462145-851a-4bb5-a123-cf1dbf357913)
+1. ```
+    touch .project-root
+    ```
 
+2.  ```
+    export UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+    ```
+3.  ```
+    uv sync --index-strategy unsafe-best-match
+    ```
+4.  ```
+    echo 'export KAGGLE_USERNAME="your_username"' >> ~/.bashrc
+    echo 'export KAGGLE_KEY="your_api_key"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
 
-
-## Dataset used 
-This dataset contains a collection of images for 10 different dog breeds, meticulously gathered and organized to facilitate various computer vision tasks such as image classification and object detection. The dataset includes the following breeds:
-
-* Golden Retriever
-* German Shepherd
-* Labrador Retriever
-* Bulldog
-* Beagle
-* Poodle
-* Rottweiler
-* Yorkshire Terrier
-* Boxer
-* Dachshund
-
-Each breed is represented by 100 images, stored in separate directories named after the respective breed. The images have been curated to ensure diversity and relevance, making this dataset a valuable resource for training and evaluating machine learning models in the field of computer vision.
-
-The [DogBreedImageDataModule](https://github.com/mkthoma/pytorch_lightning_docker/blob/main/src/datamodules/dogbreed.py) is a PyTorch Lightning data module designed to streamline the process of loading and preparing the Dog Breed Image Dataset for training, validation, and testing in deep learning models. This module integrates with the Kaggle API to automatically download and prepare the dataset, making it convenient for users to start their experiments with minimal setup.
-
-You can temporarily set the variables for the current session by running the following commands (replace your_username and your_api_key with the [actual values](https://www.kaggle.com/docs/api#interacting-with-datasets))
-```
-export UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
-
-echo 'export KAGGLE_USERNAME="mkthoma"' >> ~/.bashrc
-echo 'export KAGGLE_KEY="d1319e20badd7a804413536615a77359"' >> ~/.bashrc
-source ~/.bashrc
-
-
-echo 'export KAGGLE_USERNAME="your_username"' >> ~/.bashrc
-echo 'export KAGGLE_KEY="your_api_key"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-## Model
-The [Dog Breed Classifier](https://github.com/mkthoma/pytorch_lightning_docker/blob/main/src/models/dogbreed_classifier.py) is a deep learning model designed to classify images of dog breeds using a pre-trained ResNet50 architecture. Built with the PyTorch Lightning framework, the model leverages the timm library to utilize state-of-the-art model architectures, providing an effective solution for multi-class classification tasks.
-
-### Model Architecture
-* Base Model: The classifier uses ResNet50, a convolutional neural network that is 50 layers deep and well-regarded for its performance on image classification tasks. This model has been pre-trained on a large dataset, enabling it to capture a rich set of features useful for dog breed classification.
-
-* Output Layer: The model's output layer is dynamically adjusted to match the number of classes corresponding to the dog breeds in the dataset.
-
-### Key Features
-* Loss Function: The model employs CrossEntropyLoss, suitable for multi-class classification problems, providing a robust way to measure the performance of the classifier during training.
-
-* Metrics: It utilizes torchmetrics to track:
-
-    * Training Accuracy: Measures the accuracy of the model on the training dataset.
-    * Validation Accuracy: Monitors the accuracy on the validation dataset to avoid overfitting.
-    * Test Accuracy: Evaluates the model's performance on a separate test dataset.
-
-* Learning Rate Scheduler: A ReduceLROnPlateau scheduler is employed, which reduces the learning rate when the validation accuracy plateaus, helping improve convergence during training.
-
-## Docker build
+## Docker commands
+Based on the provided Dockerfile, the Docker commands for building the image and running train, eval, and infer with volume mounts for model artifacts. Here are the commands:
 
 1. Build the Docker image:
 
     ```
-    docker build -t dogbreed-classification .
+    docker build -t dogbreed-classifier .
     ```
 
-2. To run training:
-    ```
-    docker run -v $(pwd)/model_artifacts:/app/checkpoints dogbreed-classification train
-    ```
+2. Run the train command:
 
-3. To run evaluation:
     ```
-    docker run -v $(pwd)/model_artifacts:/app/checkpoints dogbreed-classification eval
+    docker run --rm dogbreed-classifier train
     ```
 
-4. To run inference:
+3.  Run the eval command:
+
     ```
-    docker run -v $(pwd)/model_artifacts:/app/checkpoints dogbreed-classification infer
+    docker run --rm dogbreed-classifier eval
+    ``` 
+
+4. Run the infer command:
+
     ```
-    
-    By default it performs inference on the images present in the [input_images](https://github.com/mkthoma/pytorch_lightning_docker/tree/main/model_artifacts/input_images) folder.
-
-    To modify the infer arguments, you can do the following:
-    
+    docker run --rm -v $(pwd)/outputs:/app/outputs dogbreed-classifier infer
     ```
-    docker run -v $(pwd)/model_artifacts:/app/checkpoints dogbreed-classification infer --input_folder="path/to/custom/input" --output_folder="path/to/custom/output" --ckpt_path="path/to/custom/checkpoint.ckpt"
-    ```
-## Prediction Results
 
-The model prediction gets saved in the predicted_images folder in the model artifacts. 
-
-Samples:
-
-![image](https://github.com/user-attachments/assets/64c92da0-100e-445d-b82a-c722da763106)
-
-![image](https://github.com/user-attachments/assets/41bb0022-6906-46e1-8c92-c9a86f59a4d4)
-
-![image](https://github.com/user-attachments/assets/1ac0c9b9-2180-4c6d-98d5-385b861af29d)
