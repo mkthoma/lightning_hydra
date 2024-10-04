@@ -50,3 +50,51 @@ Based on the provided Dockerfile, the Docker commands for building the image and
     docker run --rm -v $(pwd)/outputs:/app/outputs dogbreed-classifier infer
     ```
 
+## Testing
+
+This project uses pytest for unit testing and code coverage analysis. The tests are located in the `tests` folder.
+
+### Running Tests
+
+To run the tests, use the following command:
+```
+pytest tests/
+```
+To run individual tests, you can use the following command:
+```
+pytest tests/test_train.py
+```
+
+```
+pytest tests/test_eval.py
+```
+
+```
+pytest tests/test_infer.py
+```
+
+```
+pytest tests/test_models/test_timm_classifier.py
+```
+
+```
+pytest tests/test_datamodules/test_dogbreed.py
+```
+
+```
+pytest tests/test_models/test_timm_classifier.py
+```
+## Code Coverage
+
+To generate the code coverage report, use the following command:
+
+```
+coverage run -m pytest
+coverage report -m
+```
+
+![image](https://github.com/user-attachments/assets/9bcea1c0-d25c-46a8-86bb-820cca1bee3f)
+
+
+The CodeCov report can be found [here](https://app.codecov.io/github/mkthoma/lightning_hydra).
+
