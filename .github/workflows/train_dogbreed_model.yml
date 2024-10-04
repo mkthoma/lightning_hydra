@@ -37,13 +37,17 @@ jobs:
         load: true
         tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+    - name: Inspect Docker container
+      run: |
+        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ls -R /app
+
     - name: Train model
       run: |
         docker run --name trainer \
           -v ${{ github.workspace }}/logs:/app/logs \
           -v ${{ github.workspace }}/data:/app/data \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-          python src/train.py trainer.max_epochs=5
+          python /app/src/train.py trainer.max_epochs=5
 
     - name: Check model accuracy
       run: |
