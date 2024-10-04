@@ -6,20 +6,18 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
 WORKDIR /app
 
-# Copy pyproject.toml
-COPY pyproject.toml .
-
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip freeze --requirement pyproject.toml > requirements.txt && \
-    uv pip install -r requirements.txt
+	--mount=type=bind,source=uv.lock,target=uv.lock \
+	--mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+	uv sync --frozen --no-install-project --no-dev
 
 # Copy the rest of the application
-COPY . .
+ADD . /app
 
 # Install the project and its dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install .
+	uv sync --frozen --no-dev
 
 # Final stage
 FROM python:3.12-slim-bookworm
