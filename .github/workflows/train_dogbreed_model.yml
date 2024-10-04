@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - '.github/workflows/train_dogbreed_model.yml'
+      - '.github/workflows/ci.yml'
       - 'Dockerfile'
       - 'src/**'
 env:
@@ -39,7 +39,7 @@ jobs:
 
     - name: Inspect Docker container
       run: |
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ls -R /app
+        docker run --rm --entrypoint ls ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -R /app
 
     - name: Train model
       run: |
