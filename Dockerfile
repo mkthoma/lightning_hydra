@@ -11,7 +11,8 @@ COPY pyproject.toml .
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -r <(uv pip freeze --requirement pyproject.toml)
+    uv pip freeze --requirement pyproject.toml > requirements.txt && \
+    uv pip install -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
