@@ -39,7 +39,7 @@ jobs:
 
     - name: Inspect Docker container
       run: |
-        docker run --rm --entrypoint ls ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -R /app
+        docker run --rm --entrypoint sh ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -c "ls -R /app"
 
     - name: Train model
       run: |
