@@ -47,7 +47,7 @@ jobs:
           -v ${{ github.workspace }}/logs:/app/logs \
           -v ${{ github.workspace }}/data:/app/data \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-          python /app/src/train.py trainer.max_epochs=5
+          /app/src/train.py trainer.max_epochs=5
 
     - name: Check model accuracy
       run: |
