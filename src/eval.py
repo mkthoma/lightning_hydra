@@ -88,7 +88,10 @@ def evaluate(cfg: DictConfig):
         results = trainer.validate(model=TimmClassifier.load_from_checkpoint(best_checkpoint), datamodule=datamodule)
     else:
         log.warning("No checkpoints found! Using initialized model weights.")
-        model = TimmClassifier(**cfg.model)
+        log.info(f"Original model config: {cfg.model}")  # Log the original config
+        model_cfg = {k: v for k, v in cfg.model.items() if k != '_target_'}
+        log.info(f"Filtered model config: {model_cfg}")  # Log the filtered config
+        model = TimmClassifier(**model_cfg)
         results = trainer.validate(model=model, datamodule=datamodule)
 
     # Print validation metrics
