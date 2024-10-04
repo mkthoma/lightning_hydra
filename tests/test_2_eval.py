@@ -28,6 +28,7 @@ def test_evaluate():
     # Modify config for fast dev run
     cfg.trainer.fast_dev_run = True
 
+    print("Eval Model Config: ", cfg) 
     # Run evaluation
     try:
         eval_metrics = evaluate(cfg)
