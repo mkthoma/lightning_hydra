@@ -101,3 +101,6 @@ jobs:
         name: test-results
         path: logs/train/runs/*/test_results.pt
         if-no-files-found: error
+
+    - name: Print success message
+      run: echo "Model training completed successfully. Artifacts have been uploaded."
