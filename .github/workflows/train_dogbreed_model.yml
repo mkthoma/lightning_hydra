@@ -76,6 +76,11 @@ jobs:
         path: logs/train/runs/*/train.log
         if-no-files-found: error
 
+    - name: Debug - List contents of logs directory
+      run: |
+        echo "Contents of logs directory:"
+        ls -R logs/
+        
     - name: Upload config
       uses: actions/upload-artifact@v3
       with:
