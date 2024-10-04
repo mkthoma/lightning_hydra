@@ -3,18 +3,12 @@ import pytest
 from hydra import initialize, compose
 import rootutils
 from typing import List
-from lightning.pytorch.loggers import Logger
-import lightning as L
-import hydra
-import torch
 
 # Setup root directory
 root = rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 print(f"Project root: {root}")
 
 from src.eval import evaluate
-from src.datamodules.dogbreed import DogBreedImageDataModule
-from src.models.timm_classifier import TimmClassifier
 
 def test_evaluate():
     with initialize(version_base=None, config_path="../configs"):
@@ -33,13 +27,6 @@ def test_evaluate():
 
     # Modify config for fast dev run
     cfg.trainer.fast_dev_run = True
-
-    # Data preparation
-    datamodule: DogBreedImageDataModule = hydra.utils.instantiate(cfg.data)
-    datamodule.prepare_data()
-    datamodule.setup()
-
-    model: TimmClassifier = hydra.utils.instantiate(cfg.model)
 
     # Run evaluation
     try:
