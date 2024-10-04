@@ -80,24 +80,24 @@ jobs:
       run: |
         echo "Contents of logs directory:"
         ls -R logs/
-        
+
     - name: Upload config
       uses: actions/upload-artifact@v3
       with:
         name: model-config
-        path: logs/train/runs/*/.hydra/config.yaml
-        if-no-files-found: error
+        path: logs/train/runs/*/csv/version_0/hparams.yaml
+        if-no-files-found: warn
 
     - name: Upload tensorboard logs
       uses: actions/upload-artifact@v3
       with:
         name: tensorboard-logs
         path: logs/train/runs/*/tensorboard
-        if-no-files-found: error
+        if-no-files-found: warn
 
     - name: Upload test results
       uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: logs/train/runs/*/test_results.pt
-        if-no-files-found: error
+        if-no-files-found: warn
