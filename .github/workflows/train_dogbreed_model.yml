@@ -47,17 +47,17 @@ jobs:
           -v ${{ github.workspace }}/logs:/app/logs \
           -v ${{ github.workspace }}/data:/app/data \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-          /app/src/train.py trainer.max_epochs=1
+          /app/src/train.py trainer.max_epochs=5
 
-    # - name: Check model accuracy
-    #   run: |
-    #     accuracy=$(grep -oP 'test/acc: \K[0-9.]+' logs/train/runs/*/train.log | tail -1)
-    #     if (( $(echo "$accuracy < 0.95" | bc -l) )); then
-    #       echo "Model accuracy is below 95%: $accuracy"
-    #       exit 1
-    #     else
-    #       echo "Model accuracy is above 95%: $accuracy"
-    #     fi
+    - name: Check model accuracy
+      run: |
+        accuracy=$(grep -oP 'test/acc: \K[0-9.]+' logs/train/runs/*/train.log | tail -1)
+        if (( $(echo "$accuracy < 0.95" | bc -l) )); then
+          echo "Model accuracy is below 95%: $accuracy"
+          exit 1
+        else
+          echo "Model accuracy is above 95%: $accuracy"
+        fi
 
     - name: Set permissions for logs directory
       run: sudo chown -R $USER:$USER ${{ github.workspace }}/logs
@@ -86,18 +86,18 @@ jobs:
       with:
         name: model-config
         path: logs/train/runs/*/csv/version_0/hparams.yaml
-        if-no-files-found: warn
+        if-no-files-found: error
 
     - name: Upload tensorboard logs
       uses: actions/upload-artifact@v3
       with:
         name: tensorboard-logs
         path: logs/train/runs/*/tensorboard
-        if-no-files-found: warn
+        if-no-files-found: error
 
     - name: Upload test results
       uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: logs/train/runs/*/test_results.pt
-        if-no-files-found: warn
+        if-no-files-found: error
